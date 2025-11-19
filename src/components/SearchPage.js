@@ -25,7 +25,7 @@
             <ol className="books-grid">
                 {results.map((book) => ( 
                    <li key={book.id}>
-                     <SearchBook key={book.id} book={book} onUpdateShelf={onUpdateShelf} />  
+                     <SearchBook book={book} onUpdateShelf={onUpdateShelf} />  
                    </li>   
                 ))}
             </ol>
