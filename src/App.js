@@ -3,72 +3,92 @@ import { useEffect, useState } from "react";
 import { getAll, update,search } from "./BooksAPI";
 import BookList from "./components/BookList";
 import SearchPage from "./components/SearchPage";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 function App() {
-  const [showSearchPage, setShowSearchpage] = useState(false);
-  const [books, setBooks] = useState([]);
-  const [searchResults, setSearchResults] = useState([]);
-
-  useEffect(() => {
-    // Fetch books from API or perform other side effects here
-    getAll().then((books) => setBooks(books));
+// const [showSearchPage, setShowSearchpage] = useState(false);
+const [books, setBooks] = useState([]);
+const [searchResults, setSearchResults] = useState([]);
+// Charger les livres
+useEffect(() => {
+    let isMounted = true;
+    getAll().then((data) => {
+      if (isMounted) setBooks(data);
+    });
+    return () => {
+      isMounted = false;
+    };
   }, []);
+// Mettre à jour un livre (changement d’étagère)
+const updateBookShelf = (updatedBook, newShelf) => {
+  update(updatedBook, newShelf).then(() => {
+    // Mettre à jour la liste principale
+    setBooks((prevBooks) => {
+      const exists = prevBooks.some((book) => book.id === updatedBook.id);
+      if (exists) {
+        // mettre à jour un livre existant
+        return prevBooks.map((book) =>
+          book.id === updatedBook.id
+            ? { ...book, shelf: newShelf }
+            : book
+        );
+      } else {
+        // ajouter un livre venant de la recherche
+        return [...prevBooks, { ...updatedBook, shelf: newShelf }];
+      }
+    });
 
-   // mettre a jour les livres lorsqu'on change de etagere
-   const updateBookShelf = (updatedBook, newShelf) => {
-   update(updatedBook, newShelf).then(() => {
-     // Mettre a jour l'etat local des livres
-     setBooks((prevBooks) => {
-       // Verifier si le livre existe deja dans l'etat
-       const bookExists = prevBooks.some((book) => book.id === updatedBook.id);
-       if (bookExists) {
-         // Mettre a jour l'etagere du livre existant
-         return prevBooks.map((book) =>
-           book.id === updatedBook.id ? { ...book, shelf: newShelf } : book
-         );
-       } else {
-         // Ajouter le nouveau livre avec la bonne etagere
-         return [...prevBooks, { ...updatedBook, shelf: newShelf }];
-       }
-     });
-   });  
+    // Mettre à jour aussi les résultats de recherche
+    setSearchResults((prevResults) =>
+      prevResults.map((book) =>
+        book.id === updatedBook.id
+          ? { ...book, shelf: newShelf }
+          : book
+      )
+    );
+  });
+};
+
+// 🔍 Recherche des livres
+const searchBooks = (query) => {
+  if (query.trim() === "") {
+    setSearchResults([]);
+    return;
   }
-  // recherche des livres
-  const searchBooks = (query) => {
-    if (query.trim() === "") {
+  search(query, 20).then((results) => {
+    if (!results || results.error) {
       setSearchResults([]);
       return;
     }
-    search(query, 20).then((results) => {
-      if (results.error) {
-        setSearchResults([]);
-      } else {
-        // Mettre a jour les resultats de recherche avec les etageres correctes
-        const updatedResults = results.map((result) => {
-          const bookInShelf = books.find((book) => book.id === result.id);
-          return bookInShelf ? { ...result, shelf: bookInShelf.shelf } : result;
-        });
-        setSearchResults(updatedResults);
-      }
+    // Fusionner les résultats avec les livres connus
+    const updatedResults = results.map((result) => {
+      const existing = books.find((b) => b.id === result.id);
+      return existing ? { ...result, shelf: existing.shelf } : result;
     });
-  }
+
+    setSearchResults(updatedResults);
+  });
+};
+
 
   return (
-    <div className="app">
-      {showSearchPage ? (
-       <SearchPage 
-       results={searchResults} 
-       onSearch={searchBooks} 
-       onUpdateShelf={updateBookShelf}
-       onClose={() => setShowSearchpage(false) } 
-       />
-      ) : (
-       <BookList
-        updateBookShelf={updateBookShelf}
-        books={books} 
-        onOpenSearch={() => setShowSearchpage(true)} />
-      )}
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/search" element={
+          <SearchPage 
+            results={searchResults} 
+            onSearch={searchBooks} 
+            onUpdateShelf={updateBookShelf}
+          />
+        } />
+        <Route path="/" element={
+          <BookList
+            updateBookShelf={updateBookShelf}
+            books={books}
+          />
+        } />
+      </Routes>
+    </Router>
   );
 }
 

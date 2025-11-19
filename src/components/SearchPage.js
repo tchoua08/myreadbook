@@ -1,17 +1,18 @@
  
  
  import SearchBook from "./SearchBook";
+ import { Link } from "react-router-dom";
  
- export default function SearchPage({ onClose , results, onSearch, onUpdateShelf}) {
+ export default function SearchPage({ results, onSearch, onUpdateShelf}) {
    return (
  <div className="search-books">
           <div className="search-books-bar">
-            <a
+            <Link
               className="close-search"
-              onClick={onClose}
+              to="/"
             >
               Close
-            </a>
+            </Link>
             <div className="search-books-input-wrapper">
               <input
                 type="text"
@@ -22,8 +23,10 @@
           </div>
           <div className="search-books-results">
             <ol className="books-grid">
-                {results.map((book) => (    
-                <SearchBook key={book.id} book={book} onUpdateShelf={onUpdateShelf} />  
+                {results.map((book) => ( 
+                   <li key={book.id}>
+                     <SearchBook key={book.id} book={book} onUpdateShelf={onUpdateShelf} />  
+                   </li>   
                 ))}
             </ol>
           </div>
